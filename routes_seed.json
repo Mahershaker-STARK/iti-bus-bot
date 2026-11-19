@@ -1,0 +1,453 @@
+[
+  {
+    "id": 21,
+    "name": "خط مدينة نصر",
+    "routeCode": "NAS",
+    "startLocation": "ميدان رابعة",
+    "stops": [
+      {
+        "id": 31,
+        "stopName": "ميدان رابعة",
+        "stopOrder": 1
+      }
+    ]
+  },
+  {
+    "id": 19,
+    "name": "خط الطريق الدائري - العاشر",
+    "routeCode": "RNG",
+    "startLocation": "موقف العاشر",
+    "stops": [
+      {
+        "id": 23,
+        "stopName": "موقف العاشر",
+        "stopOrder": 1
+      },
+      {
+        "id": 24,
+        "stopName": "المرج",
+        "stopOrder": 2
+      },
+      {
+        "id": 25,
+        "stopName": "مسطرد",
+        "stopOrder": 3
+      },
+      {
+        "id": 26,
+        "stopName": "بهتيم",
+        "stopOrder": 4
+      },
+      {
+        "id": 27,
+        "stopName": "قليوب",
+        "stopOrder": 5
+      },
+      {
+        "id": 28,
+        "stopName": "القومية",
+        "stopOrder": 6
+      }
+    ]
+  },
+  {
+    "id": 26,
+    "name": "خط الطريق الدائري - مسطرد",
+    "routeCode": "RNG-C",
+    "startLocation": "موقف العاشر",
+    "stops": [
+      {
+        "id": 48,
+        "stopName": "مسطرد",
+        "stopOrder": 3
+      },
+      {
+        "id": 49,
+        "stopName": "بهتيم",
+        "stopOrder": 4
+      },
+      {
+        "id": 50,
+        "stopName": "قليوب",
+        "stopOrder": 5
+      },
+      {
+        "id": 51,
+        "stopName": "القومية",
+        "stopOrder": 6
+      }
+    ]
+  },
+  {
+    "id": 16,
+    "name": "خط رمسيس",
+    "routeCode": "RMS",
+    "startLocation": "التوحيد والنور",
+    "stops": [
+      {
+        "id": 12,
+        "stopName": "التوحيد والنور",
+        "stopOrder": 1
+      },
+      {
+        "id": 13,
+        "stopName": "عبد المنعم رياض",
+        "stopOrder": 2
+      },
+      {
+        "id": 14,
+        "stopName": "ميدان لبنان",
+        "stopOrder": 3
+      }
+    ]
+  },
+  {
+    "id": 17,
+    "name": "خط المعادي",
+    "routeCode": "MAD",
+    "startLocation": "مترو المعادي",
+    "stops": [
+      {
+        "id": 15,
+        "stopName": "مترو المعادي",
+        "stopOrder": 1
+      },
+      {
+        "id": 16,
+        "stopName": "النيل بدراوي",
+        "stopOrder": 2
+      },
+      {
+        "id": 17,
+        "stopName": "أكاديمية السادات",
+        "stopOrder": 3
+      },
+      {
+        "id": 18,
+        "stopName": "طلعة الدائري",
+        "stopOrder": 4
+      }
+    ]
+  },
+  {
+    "id": 20,
+    "name": "خط العباسية",
+    "routeCode": "ABS",
+    "startLocation": "الوايلي",
+    "stops": [
+      {
+        "id": 29,
+        "stopName": "الوايلي",
+        "stopOrder": 1
+      },
+      {
+        "id": 30,
+        "stopName": "غمرة",
+        "stopOrder": 2
+      }
+    ]
+  },
+  {
+    "id": 22,
+    "name": "خط التجمع",
+    "routeCode": "TAG",
+    "startLocation": "المستشفى الجوي",
+    "stops": [
+      {
+        "id": 32,
+        "stopName": "المستشفى الجوي",
+        "stopOrder": 1
+      },
+      {
+        "id": 33,
+        "stopName": "بنزينة وطنية",
+        "stopOrder": 2
+      }
+    ]
+  },
+  {
+    "id": 28,
+    "name": "خط الطريق الدائري - العاشر 2",
+    "routeCode": "RNG-f",
+    "startLocation": "موقف العاشر",
+    "stops": [
+      {
+        "id": 52,
+        "stopName": "موقف العاشر",
+        "stopOrder": 1
+      },
+      {
+        "id": 53,
+        "stopName": "المرج",
+        "stopOrder": 2
+      },
+      {
+        "id": 54,
+        "stopName": "مسطرد",
+        "stopOrder": 3
+      },
+      {
+        "id": 55,
+        "stopName": "بهتيم",
+        "stopOrder": 4
+      },
+      {
+        "id": 56,
+        "stopName": "قليوب",
+        "stopOrder": 5
+      },
+      {
+        "id": 57,
+        "stopName": "القومية",
+        "stopOrder": 6
+      }
+    ]
+  },
+  {
+    "id": 29,
+    "name": "خط الجيزة 2",
+    "routeCode": "GIZ-f",
+    "startLocation": "التوحيد والنور",
+    "stops": [
+      {
+        "id": 58,
+        "stopName": "التوحيد والنور",
+        "stopOrder": 1
+      },
+      {
+        "id": 59,
+        "stopName": "الطالبية",
+        "stopOrder": 2
+      },
+      {
+        "id": 60,
+        "stopName": "العريش",
+        "stopOrder": 3
+      },
+      {
+        "id": 61,
+        "stopName": "المريوطية",
+        "stopOrder": 4
+      },
+      {
+        "id": 62,
+        "stopName": "مشعل",
+        "stopOrder": 5
+      },
+      {
+        "id": 63,
+        "stopName": "الرماية",
+        "stopOrder": 6
+      }
+    ]
+  },
+  {
+    "id": 24,
+    "name": "خط 6 أكتوبر - حصرى 1",
+    "routeCode": "OCT-D",
+    "startLocation": "ليلة القدر",
+    "stops": [
+      {
+        "id": 39,
+        "stopName": "الحصري",
+        "stopOrder": 2
+      },
+      {
+        "id": 40,
+        "stopName": "جهينة",
+        "stopOrder": 3
+      },
+      {
+        "id": 41,
+        "stopName": "هايبر",
+        "stopOrder": 4
+      }
+    ]
+  },
+  {
+    "id": 30,
+    "name": "خط 6 أكتوبر ليلة القدر 2",
+    "routeCode": "OCT-h",
+    "startLocation": "ليلة القدر",
+    "stops": [
+      {
+        "id": 64,
+        "stopName": "ليلة القدر",
+        "stopOrder": 1
+      },
+      {
+        "id": 65,
+        "stopName": "الحصري",
+        "stopOrder": 2
+      },
+      {
+        "id": 66,
+        "stopName": "جهينة",
+        "stopOrder": 3
+      },
+      {
+        "id": 67,
+        "stopName": "هايبر",
+        "stopOrder": 4
+      }
+    ]
+  },
+  {
+    "id": 23,
+    "name": "خط 6 أكتوبر - حصرى 2",
+    "routeCode": "OCT-C",
+    "startLocation": "ليلة القدر",
+    "stops": [
+      {
+        "id": 35,
+        "stopName": "الحصري",
+        "stopOrder": 2
+      },
+      {
+        "id": 36,
+        "stopName": "جهينة",
+        "stopOrder": 3
+      },
+      {
+        "id": 37,
+        "stopName": "هايبر",
+        "stopOrder": 4
+      }
+    ]
+  },
+  {
+    "id": 18,
+    "name": "خط 6 أكتوبر ليلة القدر 1",
+    "routeCode": "OCT",
+    "startLocation": "ليلة القدر",
+    "stops": [
+      {
+        "id": 19,
+        "stopName": "ليلة القدر",
+        "stopOrder": 1
+      },
+      {
+        "id": 20,
+        "stopName": "الحصري",
+        "stopOrder": 2
+      },
+      {
+        "id": 21,
+        "stopName": "جهينة",
+        "stopOrder": 3
+      },
+      {
+        "id": 22,
+        "stopName": "هايبر",
+        "stopOrder": 4
+      }
+    ]
+  },
+  {
+    "id": 25,
+    "name": "خط 6 أكتوبر - حصرى 3",
+    "routeCode": "OCT-E",
+    "startLocation": "ليلة القدر",
+    "stops": [
+      {
+        "id": 43,
+        "stopName": "الحصري",
+        "stopOrder": 2
+      },
+      {
+        "id": 44,
+        "stopName": "جهينة",
+        "stopOrder": 3
+      },
+      {
+        "id": 45,
+        "stopName": "هايبر",
+        "stopOrder": 4
+      }
+    ]
+  },
+  {
+    "id": 15,
+    "name": "خط الجيزة 1",
+    "routeCode": "GIZ",
+    "startLocation": "التوحيد والنور",
+    "stops": [
+      {
+        "id": 6,
+        "stopName": "التوحيد والنور",
+        "stopOrder": 1
+      },
+      {
+        "id": 7,
+        "stopName": "الطالبية",
+        "stopOrder": 2
+      },
+      {
+        "id": 8,
+        "stopName": "العريش",
+        "stopOrder": 3
+      },
+      {
+        "id": 9,
+        "stopName": "المريوطية",
+        "stopOrder": 4
+      },
+      {
+        "id": 10,
+        "stopName": "مشعل",
+        "stopOrder": 5
+      },
+      {
+        "id": 11,
+        "stopName": "الرماية",
+        "stopOrder": 6
+      }
+    ]
+  },
+  {
+    "id": 31,
+    "name": "خط 6 أكتوبر - حصرى 4",
+    "routeCode": "OCT-j",
+    "startLocation": "ليلة القدر",
+    "stops": [
+      {
+        "id": 68,
+        "stopName": "الحصري",
+        "stopOrder": 2
+      },
+      {
+        "id": 69,
+        "stopName": "جهينة",
+        "stopOrder": 3
+      },
+      {
+        "id": 70,
+        "stopName": "هايبر",
+        "stopOrder": 4
+      }
+    ]
+  },
+  {
+    "id": 32,
+    "name": "خط 6 أكتوبر - حصرى 5",
+    "routeCode": "OCT-j-k",
+    "startLocation": "ليلة القدر",
+    "stops": [
+      {
+        "id": 71,
+        "stopName": "الحصري",
+        "stopOrder": 2
+      },
+      {
+        "id": 72,
+        "stopName": "جهينة",
+        "stopOrder": 3
+      },
+      {
+        "id": 73,
+        "stopName": "هايبر",
+        "stopOrder": 4
+      }
+    ]
+  }
+]

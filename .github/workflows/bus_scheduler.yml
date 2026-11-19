@@ -1,0 +1,79 @@
+name: ITI Bus Scheduler
+
+on:
+  # ── Scheduled runs ─────────────────────────────────────────────────────────
+  # Cron every 5 minutes from 09:00 to 16:00 Cairo time (Cairo is UTC+2, so 07:00 to 14:00 UTC)
+  # on Egyptian working days Sun-Thu (0,1,2,3,4)
+  schedule:
+    - cron: '*/5 7-14 * * 0,1,2,3,4'
+
+  # ── Repository dispatch events triggered by Telegram bot ───────────────────
+  repository_dispatch:
+    types:
+      - telegram_check
+      - telegram_book
+
+  # ── Manual trigger for testing ─────────────────────────────────────────────
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Execution action'
+        required: false
+        default: 'scheduled'
+        type: choice
+        options:
+          - scheduled
+          - telegram_check
+          - telegram_book
+      payload:
+        description: 'Optional JSON payload for testing dispatch mode'
+        required: false
+        default: ''
+
+# ── Concurrency: queue runs safely without cancelling ───────────────────────
+concurrency:
+  group: iti-bus-scheduler
+  cancel-in-progress: false
+
+jobs:
+  run-scheduler:
+    name: Run ITI Bus Scheduler
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Execute ITI Runner
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          ADMIN_ID: ${{ secrets.ADMIN_ID }}
+          ITI_URL: ${{ secrets.ITI_URL || 'https://schedule.iti.gov.eg/api/v1' }}
+          ITI_EMAIL: ${{ secrets.ITI_EMAIL }}
+          ITI_PASSWORD: ${{ secrets.ITI_PASSWORD }}
+          PRIMARY_ROUTE_ID: ${{ secrets.PRIMARY_ROUTE_ID || vars.PRIMARY_ROUTE_ID }}
+          PRIMARY_STOP_ID: ${{ secrets.PRIMARY_STOP_ID || vars.PRIMARY_STOP_ID }}
+          PRIMARY_STOP_NAME: ${{ secrets.PRIMARY_STOP_NAME || vars.PRIMARY_STOP_NAME }}
+          BACKUP_ROUTE_ID: ${{ secrets.BACKUP_ROUTE_ID || vars.BACKUP_ROUTE_ID }}
+          BACKUP_STOP_ID: ${{ secrets.BACKUP_STOP_ID || vars.BACKUP_STOP_ID }}
+          BACKUP_STOP_NAME: ${{ secrets.BACKUP_STOP_NAME || vars.BACKUP_STOP_NAME }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID || vars.TELEGRAM_CHAT_ID }}
+          ACTIVE_USERS: ${{ secrets.ACTIVE_USERS }}
+          PYTHONANYWHERE_URL: ${{ secrets.PYTHONANYWHERE_URL || vars.PYTHONANYWHERE_URL }}
+          PYTHONANYWHERE_TOKEN: ${{ secrets.PYTHONANYWHERE_TOKEN }}
+          EVENT_PAYLOAD: ${{ github.event.inputs.payload || toJson(github.event.client_payload) }}
+          EVENT_ACTION: ${{ github.event.inputs.action || github.event.action }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: python runner.py
