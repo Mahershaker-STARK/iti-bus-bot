@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 # Environment variables
 # ---------------------------------------------------------------------------
 BOT_TOKEN: str = os.environ["BOT_TOKEN"]
-ADMIN_ID: int = int(os.environ["ADMIN_ID"])
+ADMIN_ID: int = int(os.environ.get("ADMIN_ID", "0"))
 DB_PATH: str = os.environ.get("DB_PATH", "bot_data.db")
 PORT: int = int(os.environ.get("PORT", "10000"))
 ITI_URL: str = os.environ.get("ITI_URL", "https://schedule.iti.gov.eg")
@@ -251,8 +251,8 @@ async def cmd_login(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     access_token = result["accessToken"]
     refresh_token = result["refreshToken"]
 
-    # Determine approval: existing approved users keep it; new users start pending
-    is_approved = 1 if (user and user["is_approved"]) else 0
+    # Determine approval: existing approved users keep it; admin is auto-approved; if ADMIN_ID is 0, auto-approve
+    is_approved = 1 if (user and user["is_approved"]) or (ADMIN_ID != 0 and tid == ADMIN_ID) or (ADMIN_ID == 0) else 0
 
     db.upsert_user(
         tid,
