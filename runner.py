@@ -642,6 +642,78 @@ async def handle_dispatch_check(session: aiohttp.ClientSession, user: dict, date
     await send_telegram(session, chat_id, "\n".join(lines))
 
 
+async def handle_dispatch_login(session: aiohttp.ClientSession, payload: dict) -> None:
+    chat_id = payload.get("chat_id")
+    email = str(payload.get("email") or "").strip()
+    password = str(payload.get("password") or "").strip()
+    callback_url = payload.get("callback_url")
+    api_secret = payload.get("api_secret")
+
+    if not email or not password:
+        await send_telegram(
+            session,
+            chat_id,
+            "⚠️ <b>بيانات الدخول غير مكتملة.</b> يرجى إدخال البريد وكلمة المرور:\n<code>/login email password</code>",
+        )
+        return
+
+    logger.info("Verifying login credentials on ITI API for: %s", email)
+    client = iti_api.ITIApiClient(ITI_URL, email, password)
+    try:
+        auth = await client.login(session)
+        full_name = auth.get("fullName") or email
+        logger.info("Login verification SUCCESS for %s (%s)", email, full_name)
+
+        # Call back to PythonAnywhere to save credentials & full name
+        if callback_url:
+            try:
+                save_payload = {
+                    "secret": api_secret,
+                    "chat_id": chat_id,
+                    "email": email,
+                    "password": password,
+                    "full_name": full_name,
+                    "access_token": auth.get("accessToken", ""),
+                    "refresh_token": auth.get("refreshToken", ""),
+                }
+                async with session.post(
+                    callback_url,
+                    json=save_payload,
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as resp:
+                    logger.info("Saved user to PythonAnywhere: HTTP %s", resp.status)
+            except Exception as e:
+                logger.warning("Failed to save user to callback_url: %s", e)
+
+        msg = (
+            f"✅ <b>تم تسجيل الدخول بنجاح وحفظ بياناتك!</b>\n\n"
+            f"🎓 مرحباً بك يا <b>{full_name}</b>\n\n"
+            f"📍 <b>الخطوة التالية (تحديد خطوط السير):</b>\n"
+            f"1. اختر خطك ومحطتك الأساسية عبر <code>/primary</code>\n"
+            f"2. اختر خطك الاحتياطي عبر <code>/backup</code>\n\n"
+            f"🔍 <i>يمكنك فحص الرحلات عبر <code>/check</code> أو الحجز الفوري عبر <code>/book</code></i>"
+        )
+        await send_telegram(session, chat_id, msg)
+
+    except iti_api.ITIAuthError:
+        logger.warning("Login verification FAILED for %s (Invalid credentials)", email)
+        msg = (
+            f"❌ <b>فشل تسجيل الدخول!</b>\n\n"
+            f"البريد الإلكتروني أو كلمة المرور غير صحيحة على نظام ITI.\n\n"
+            f"يرجى التأكد من البيانات والمحاولة مجدداً عبر:\n"
+            f"<code>/login بريدك@example.com كلمة_المرور</code>"
+        )
+        await send_telegram(session, chat_id, msg)
+    except Exception as e:
+        logger.error("Unexpected error during login verification: %s", e)
+        msg = (
+            f"⚠️ <b>تعذر التحقق من الدخول حالياً:</b> {e}\n"
+            f"يرجى إعادة المحاولة بعد لحظات عبر:\n"
+            f"<code>/login بريدك@example.com كلمة_المرور</code>"
+        )
+        await send_telegram(session, chat_id, msg)
+
+
 async def run_dispatch_mode(
     session: aiohttp.ClientSession,
     payload: dict,
@@ -652,7 +724,10 @@ async def run_dispatch_mode(
     logger.info("Executing Dispatch Mode. Action: '%s'", action)
     user = enrich_user(payload)
 
-    if action == "check":
+    if action == "login":
+        await handle_dispatch_login(session, payload)
+        return
+    elif action == "check":
         await handle_dispatch_check(session, user, date_str)
     elif action == "book":
         # Fetch trips and attempt booking
@@ -796,6 +871,8 @@ def determine_mode(payload: dict) -> tuple[str, str]:
         resolved_action = "book"
     elif "check" in action_lower:
         resolved_action = "check"
+    elif "login" in action_lower:
+        resolved_action = "login"
     else:
         resolved_action = "check" if mode == "dispatch" else ""
 

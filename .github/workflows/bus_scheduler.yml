@@ -16,6 +16,7 @@ on:
     types:
       - telegram_check
       - telegram_book
+      - telegram_login
 
   # ── Manual trigger for testing ─────────────────────────────────────────────
   workflow_dispatch:
@@ -27,6 +28,9 @@ on:
         type: choice
         options:
           - scheduled
+          - telegram_check
+          - telegram_book
+          - telegram_login
           - telegram_check
           - telegram_book
       payload:

@@ -324,41 +324,24 @@ def handle_command(chat_id: int, user_id: int, text: str, user_name: str = "") -
         email = args[0].strip()
         password = args[1].strip()
 
-        # Approval logic: admin or if ADMIN_ID == 0 -> automatically approved
-        is_approved = 1 if (ADMIN_ID == 0 or user_id == ADMIN_ID) else 0
-
-        # Preserve existing approval if already approved
-        existing = db.get_user(user_id)
-        if existing and existing.get("is_approved"):
-            is_approved = 1
-
-        db.upsert_user(
-            user_id,
-            iti_email=email,
-            iti_password=password,
-            full_name=user_name or f"User_{user_id}",
-            is_approved=is_approved,
+        send_telegram_message(
+            chat_id,
+            "⏳ <b>جاري التحقق من صحة بيانات الدخول عبر سيرفرات ITI...</b>\nستصلك رسالة التأكيد فور اكتمال الفحص.",
         )
 
-        if is_approved:
-            send_telegram_message(chat_id, MSG_LOGIN_SUCCESS.format(email=email))
-        else:
-            send_telegram_message(chat_id, MSG_PENDING_APPROVAL)
-            # Notify administrator if configured
-            if ADMIN_ID and ADMIN_ID != user_id:
-                admin_kb = {
-                    "inline_keyboard": [
-                        [
-                            {"text": "✅ موافقة", "callback_data": f"admin:approve:{user_id}"},
-                            {"text": "🚫 حظر", "callback_data": f"admin:block:{user_id}"},
-                        ]
-                    ]
-                }
-                send_telegram_message(
-                    ADMIN_ID,
-                    MSG_ADMIN_ALERT_NEW_USER.format(telegram_id=user_id, email=email, name=user_name),
-                    reply_markup=admin_kb,
-                )
+        payload = {
+            "chat_id": chat_id,
+            "email": email,
+            "password": password,
+            "action": "login",
+            "bot_token": BOT_TOKEN,
+            "callback_url": "https://maherstark.pythonanywhere.com/api/v1/save_user",
+            "api_secret": API_SECRET,
+        }
+
+        success = dispatch_github_action("telegram_login", payload)
+        if not success:
+            send_telegram_message(chat_id, MSG_DISPATCH_FAILED)
         return
 
     # /primary — select primary route
@@ -740,6 +723,37 @@ def mark_booked(chat_id: Optional[str] = None):
         return jsonify({"status": "success", "telegram_id": int(tid), "booked_today": 1}), 200
     except Exception as e:
         logger.error("Error setting booked_today for %s: %s", tid, e)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/v1/save_user", methods=["POST"])
+def save_user():
+    """Secure endpoint to save/update a user verified by GitHub Actions."""
+    if not _is_authorized(request):
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    chat_id = data.get("chat_id") or data.get("telegram_id")
+    email = data.get("email") or data.get("iti_email")
+    password = data.get("password") or data.get("iti_password")
+
+    if not chat_id or not email or not password:
+        return jsonify({"status": "error", "message": "Missing required fields"}), 400
+
+    try:
+        db.upsert_user(
+            int(chat_id),
+            iti_email=email,
+            iti_password=password,
+            full_name=data.get("full_name") or f"User_{chat_id}",
+            access_token=data.get("access_token", ""),
+            refresh_token=data.get("refresh_token", ""),
+            is_approved=1,
+        )
+        logger.info("Successfully saved verified user %s (%s)", chat_id, email)
+        return jsonify({"status": "success", "message": "User saved", "chat_id": int(chat_id)}), 200
+    except Exception as e:
+        logger.error("Error saving user %s: %s", chat_id, e)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
