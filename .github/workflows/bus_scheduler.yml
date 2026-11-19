@@ -6,10 +6,10 @@ run-name: >-
 
 on:
   # ── Scheduled runs ─────────────────────────────────────────────────────────
-  # Cron every 5 minutes from 09:00 to 16:00 Cairo time (Cairo is UTC+2, so 07:00 to 14:00 UTC)
-  # on Egyptian working days Sun-Thu (0,1,2,3,4)
+  # Cron every 5 minutes from 09:00 to 16:55 Cairo time (Cairo is UTC+2, so 07:00 to 14:55 UTC)
+  # on Egyptian working days Sun-Thu (0-4)
   schedule:
-    - cron: '*/5 7-14 * * 0,1,2,3,4'
+    - cron: '*/5 7-14 * * 0-4'
 
   # ── Repository dispatch events triggered by Telegram bot ───────────────────
   repository_dispatch:
