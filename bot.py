@@ -11,6 +11,7 @@ import os
 from datetime import datetime, date, timedelta, timezone
 
 import aiohttp
+from aiohttp import web
 import pytz
 from telegram import (
     Update,
@@ -741,21 +742,21 @@ async def reset_booked_today_task() -> None:
 # HTTP healthcheck server
 # ---------------------------------------------------------------------------
 
-async def _health_handler(request: aiohttp.web.Request) -> aiohttp.web.Response:
+async def _health_handler(request: web.Request) -> web.Response:
     payload = {
         "status": "ok",
         "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
-    return aiohttp.web.json_response(payload)
+    return web.json_response(payload)
 
 
 async def run_health_server() -> None:
-    app = aiohttp.web.Application()
+    app = web.Application()
     app.router.add_get("/", _health_handler)
     app.router.add_get("/health", _health_handler)
-    runner = aiohttp.web.AppRunner(app)
+    runner = web.AppRunner(app)
     await runner.setup()
-    site = aiohttp.web.TCPSite(runner, "0.0.0.0", PORT)
+    site = web.TCPSite(runner, "0.0.0.0", PORT)
     await site.start()
     logger.info("Health server listening on port %s", PORT)
     # Keep running forever
