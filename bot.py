@@ -751,16 +751,29 @@ async def _health_handler(request: web.Request) -> web.Response:
 
 
 async def run_health_server() -> None:
-    app = web.Application()
-    app.router.add_get("/", _health_handler)
-    app.router.add_get("/health", _health_handler)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", PORT)
-    await site.start()
-    logger.info("Health server listening on port %s", PORT)
-    # Keep running forever
-    await asyncio.Event().wait()
+    if PORT <= 0:
+        logger.info("Health server disabled (PORT <= 0)")
+        await asyncio.Event().wait()
+        return
+
+    try:
+        app = web.Application()
+        app.router.add_get("/", _health_handler)
+        app.router.add_get("/health", _health_handler)
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "0.0.0.0", PORT)
+        await site.start()
+        logger.info("Health server listening on port %s", PORT)
+        # Keep running forever
+        await asyncio.Event().wait()
+    except OSError as e:
+        logger.warning(
+            "Could not bind health server on port %s: %s (continuing without health server)",
+            PORT,
+            e,
+        )
+        await asyncio.Event().wait()
 
 
 # ---------------------------------------------------------------------------
