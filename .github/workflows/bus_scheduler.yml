@@ -1,4 +1,8 @@
 name: ITI Bus Scheduler
+run-name: >-
+  ${{ github.event_name == 'schedule' && '⏰ Automated Cron (5-min Auto Check)' ||
+      github.event_name == 'repository_dispatch' && format('🤖 Telegram Bot ({0} - User {1})', github.event.action, github.event.client_payload.chat_id) ||
+      format('🛠️ Manual Trigger ({0})', github.event.inputs.action || 'workflow_dispatch') }}
 
 on:
   # ── Scheduled runs ─────────────────────────────────────────────────────────
