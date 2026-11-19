@@ -814,6 +814,10 @@ async def main() -> None:
         except Exception as e:
             logger.warning("Failed to parse EVENT_PAYLOAD JSON: %s", e)
 
+    global BOT_TOKEN
+    if not BOT_TOKEN and payload.get("bot_token"):
+        BOT_TOKEN = str(payload["bot_token"]).strip()
+
     # 2. Determine mode & action
     mode, action = determine_mode(payload)
     date_str = payload.get("date") or get_cairo_date_str()

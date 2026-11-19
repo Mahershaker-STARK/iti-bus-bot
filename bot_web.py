@@ -408,6 +408,7 @@ def handle_command(chat_id: int, user_id: int, text: str, user_name: str = "") -
             "backup_route_id": user.get("backup_route_id"),
             "backup_stop_id": user.get("backup_stop_id"),
             "action": "check",
+            "bot_token": BOT_TOKEN,
         }
 
         # Reply immediately as required by specification
@@ -438,6 +439,7 @@ def handle_command(chat_id: int, user_id: int, text: str, user_name: str = "") -
             "backup_route_id": user.get("backup_route_id"),
             "backup_stop_id": user.get("backup_stop_id"),
             "action": "book",
+            "bot_token": BOT_TOKEN,
         }
 
         # Reply immediately as required by specification
