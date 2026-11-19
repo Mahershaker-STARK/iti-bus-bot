@@ -635,9 +635,13 @@ application = app  # Standard WSGI entry point for PythonAnywhere
 
 
 def _is_authorized(req: request) -> bool:
-    """Validate API secret from query parameter or Authorization Bearer header."""
+    """Validate API secret from query parameter, JSON body, or Authorization Bearer header."""
     secret = req.args.get("secret")
     if secret and secret == API_SECRET:
+        return True
+
+    data = req.get_json(silent=True) or {}
+    if isinstance(data, dict) and data.get("secret") == API_SECRET:
         return True
 
     auth_header = req.headers.get("Authorization", "")
