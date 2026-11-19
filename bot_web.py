@@ -849,6 +849,49 @@ def reset_booked():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+def dispatch_workflow_scheduled() -> bool:
+    """Trigger the bus_scheduler workflow directly in scheduled mode."""
+    if not GITHUB_TOKEN:
+        logger.error("GITHUB_TOKEN is missing; cannot dispatch workflow.")
+        return False
+
+    url = f"https://api.github.com/repos/{GITHUB_REPO}/actions/workflows/bus_scheduler.yml/dispatches"
+    headers = {
+        "Authorization": f"Bearer {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github.v3+json",
+        "Content-Type": "application/json",
+        "User-Agent": "ITI-Bus-Bot/2.0",
+    }
+    body = {"ref": "main", "inputs": {"action": "scheduled"}}
+    try:
+        resp = requests.post(url, json=body, headers=headers, timeout=10)
+        logger.info("dispatch_workflow_scheduled response: %s", resp.status_code)
+        return resp.status_code in (200, 204)
+    except Exception as e:
+        logger.error("Exception dispatching workflow: %s", e)
+        return False
+
+
+@app.route("/api/v1/trigger_cron", methods=["GET", "POST"])
+@app.route("/cron", methods=["GET", "POST"])
+def trigger_cron():
+    """Trigger scheduled auto-booking check on GitHub Actions."""
+    if not _is_authorized(request):
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    active_users = db.get_all_active_users()
+    if not active_users:
+        logger.info("trigger_cron called, but no active users found.")
+        return jsonify({"status": "skipped", "message": "No active users need booking", "count": 0}), 200
+
+    ok = dispatch_workflow_scheduled()
+    return jsonify({
+        "status": "success" if ok else "failed",
+        "message": "Dispatched scheduled runner to GitHub Actions" if ok else "Dispatch failed",
+        "active_users_count": len(active_users),
+    }), 200 if ok else 500
+
+
 @app.route("/api/v1/notify", methods=["POST"])
 def send_notification():
     """Allows external scripts / GitHub Actions to push a message through the bot."""
