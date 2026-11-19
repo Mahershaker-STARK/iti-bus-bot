@@ -68,6 +68,7 @@ async def send_telegram(
     chat_id: int | str | None,
     text: str,
     parse_mode: str = "HTML",
+    reply_markup: dict | None = None,
 ) -> bool:
     """
     Send a direct Telegram message via Telegram Bot API:
@@ -88,6 +89,8 @@ async def send_telegram(
     }
     if parse_mode:
         payload["parse_mode"] = parse_mode
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
 
     try:
         async with session.post(
@@ -693,7 +696,17 @@ async def handle_dispatch_login(session: aiohttp.ClientSession, payload: dict) -
             f"2. اختر خطك الاحتياطي عبر <code>/backup</code>\n\n"
             f"🔍 <i>يمكنك فحص الرحلات عبر <code>/check</code> أو الحجز الفوري عبر <code>/book</code></i>"
         )
-        await send_telegram(session, chat_id, msg)
+        main_keyboard = {
+            "keyboard": [
+                [{"text": "🚌 الخط الأساسي"}, {"text": "🔄 الخط الاحتياطي"}],
+                [{"text": "🔍 فحص الرحلات"}, {"text": "⚡ حجز فوري"}],
+                [{"text": "📊 حالتي وإعداداتي"}, {"text": "⚙️ تبديل الحجز التلقائي"}],
+                [{"text": "🚪 تسجيل الخروج"}]
+            ],
+            "resize_keyboard": True,
+            "is_persistent": True
+        }
+        await send_telegram(session, chat_id, msg, reply_markup=main_keyboard)
 
     except iti_api.ITIAuthError:
         logger.warning("Login verification FAILED for %s (Invalid credentials)", email)
@@ -703,7 +716,15 @@ async def handle_dispatch_login(session: aiohttp.ClientSession, payload: dict) -
             f"يرجى التأكد من البيانات والمحاولة مجدداً عبر:\n"
             f"<code>/login بريدك@example.com كلمة_المرور</code>"
         )
-        await send_telegram(session, chat_id, msg)
+        login_failed_kb = {
+            "keyboard": [
+                [{"text": "🔑 تسجيل الدخول"}],
+                [{"text": "ℹ️ تعليمات الاستخدام"}]
+            ],
+            "resize_keyboard": True,
+            "is_persistent": True
+        }
+        await send_telegram(session, chat_id, msg, reply_markup=login_failed_kb)
     except Exception as e:
         logger.error("Unexpected error during login verification: %s", e)
         msg = (

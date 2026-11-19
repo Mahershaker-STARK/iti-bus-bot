@@ -39,7 +39,7 @@ logger = logging.getLogger("bot_web")
 # ---------------------------------------------------------------------------
 # Configuration & Environment Variables
 # ---------------------------------------------------------------------------
-BOT_TOKEN: str = os.environ.get("BOT_TOKEN", "9127650907:AAE9vm6arlCS2-AkfcR_bBXPzUloFBXN0us").strip()
+BOT_TOKEN: str = os.environ.get("BOT_TOKEN", "").strip()
 ADMIN_ID: int = int(os.environ.get("ADMIN_ID", "0"))
 DB_PATH: str = os.environ.get("DB_PATH", "bot_data.db").strip()
 API_SECRET: str = os.environ.get("API_SECRET", "iti_secret_token_2026").strip()
@@ -279,6 +279,43 @@ def dispatch_github_action(event_type: str, client_payload: dict) -> bool:
 # ---------------------------------------------------------------------------
 # Telegram Bot Core Handlers
 # ---------------------------------------------------------------------------
+def get_main_reply_keyboard(is_logged_in: bool = True) -> dict:
+    """Generate persistent ReplyKeyboardMarkup based on authentication state."""
+    if is_logged_in:
+        return {
+            "keyboard": [
+                [{"text": "🚌 الخط الأساسي"}, {"text": "🔄 الخط الاحتياطي"}],
+                [{"text": "🔍 فحص الرحلات"}, {"text": "⚡ حجز فوري"}],
+                [{"text": "📊 حالتي وإعداداتي"}, {"text": "⚙️ تبديل الحجز التلقائي"}],
+                [{"text": "🚪 تسجيل الخروج"}, {"text": "ℹ️ تعليمات الاستخدام"}]
+            ],
+            "resize_keyboard": True,
+            "is_persistent": True,
+        }
+    else:
+        return {
+            "keyboard": [
+                [{"text": "🔑 تسجيل الدخول"}],
+                [{"text": "ℹ️ تعليمات الاستخدام"}]
+            ],
+            "resize_keyboard": True,
+            "is_persistent": True,
+        }
+
+
+BUTTON_COMMAND_MAP = {
+    "🚌 الخط الأساسي": "/primary",
+    "🔄 الخط الاحتياطي": "/backup",
+    "🔍 فحص الرحلات": "/check",
+    "⚡ حجز فوري": "/book",
+    "📊 حالتي وإعداداتي": "/status",
+    "⚙️ تبديل الحجز التلقائي": "/auto",
+    "🚪 تسجيل الخروج": "/logout",
+    "🔑 تسجيل الدخول": "/login_prompt",
+    "ℹ️ تعليمات الاستخدام": "/help",
+}
+
+
 def build_routes_keyboard(kind: str) -> dict:
     """Generate inline keyboard for routes using pre-cached database table."""
     routes = db.get_cached_routes()
@@ -303,22 +340,61 @@ def build_stops_keyboard(kind: str, route_id: int) -> dict:
 
 
 def handle_command(chat_id: int, user_id: int, text: str, user_name: str = "") -> None:
-    """Process incoming slash commands."""
-    parts = text.strip().split()
-    if not parts:
-        return
-    cmd = parts[0].lower().split("@")[0]  # strip bot username if present
-    args = parts[1:]
+    """Process incoming slash commands and reply keyboard buttons."""
+    user = db.get_user(user_id)
+    is_logged_in = bool(user and user.get("iti_email"))
+
+    raw_text = text.strip()
+    if raw_text in BUTTON_COMMAND_MAP:
+        cmd = BUTTON_COMMAND_MAP[raw_text]
+        args = []
+    else:
+        parts = raw_text.split()
+        if not parts:
+            return
+        cmd = parts[0].lower().split("@")[0]
+        args = parts[1:]
 
     # /start or /help
     if cmd in ("/start", "/help"):
-        send_telegram_message(chat_id, MSG_WELCOME)
+        send_telegram_message(chat_id, MSG_WELCOME, reply_markup=get_main_reply_keyboard(is_logged_in))
+        return
+
+    # /login_prompt (from ReplyKeyboard button)
+    if cmd == "/login_prompt":
+        if is_logged_in:
+            msg = (
+                f"ℹ️ <b>أنت مسجل دخولك بالفعل!</b>\n\n"
+                f"👤 <b>الحساب:</b> <code>{user.get('iti_email')}</code>\n"
+                f"🎓 <b>الاسم:</b> <b>{user.get('full_name', '')}</b>\n\n"
+                f"لا يمكنك استخدام أمر تسجيل الدخول وأنت مسجل بالفعل.\n"
+                f"إذا كنت ترغب في استخدام حساب آخر، اضغط على زر <b>'🚪 تسجيل الخروج'</b> أولاً."
+            )
+            send_telegram_message(chat_id, msg, reply_markup=get_main_reply_keyboard(True))
+            return
+
+        msg = (
+            "🔑 <b>لتسجيل الدخول، أرسل الأمر التالي متبوعاً ببياناتك:</b>\n\n"
+            "<code>/login بريدك@example.com كلمة_المرور</code>"
+        )
+        send_telegram_message(chat_id, msg, reply_markup=get_main_reply_keyboard(False))
         return
 
     # /login <email> <password>
     if cmd == "/login":
+        if is_logged_in:
+            msg = (
+                f"ℹ️ <b>أنت مسجل دخولك بالفعل!</b>\n\n"
+                f"👤 <b>الحساب:</b> <code>{user.get('iti_email')}</code>\n"
+                f"🎓 <b>الاسم:</b> <b>{user.get('full_name', '')}</b>\n\n"
+                f"لا يمكنك استخدام أمر تسجيل الدخول وأنت مسجل بالفعل.\n"
+                f"إذا كنت ترغب في استخدام حساب آخر، اضغط على زر <b>'🚪 تسجيل الخروج'</b> أولاً."
+            )
+            send_telegram_message(chat_id, msg, reply_markup=get_main_reply_keyboard(True))
+            return
+
         if len(args) < 2:
-            send_telegram_message(chat_id, MSG_LOGIN_USAGE)
+            send_telegram_message(chat_id, MSG_LOGIN_USAGE, reply_markup=get_main_reply_keyboard(False))
             return
 
         email = args[0].strip()
@@ -327,6 +403,7 @@ def handle_command(chat_id: int, user_id: int, text: str, user_name: str = "") -
         send_telegram_message(
             chat_id,
             "⏳ <b>جاري التحقق من صحة بيانات الدخول عبر سيرفرات ITI...</b>\nستصلك رسالة التأكيد فور اكتمال الفحص.",
+            reply_markup=get_main_reply_keyboard(False),
         )
 
         payload = {
@@ -341,17 +418,16 @@ def handle_command(chat_id: int, user_id: int, text: str, user_name: str = "") -
 
         success = dispatch_github_action("telegram_login", payload)
         if not success:
-            send_telegram_message(chat_id, MSG_DISPATCH_FAILED)
+            send_telegram_message(chat_id, MSG_DISPATCH_FAILED, reply_markup=get_main_reply_keyboard(False))
         return
 
     # /primary — select primary route
     if cmd == "/primary":
-        user = db.get_user(user_id)
-        if not user or not user.get("iti_email"):
-            send_telegram_message(chat_id, MSG_NOT_LOGGED_IN)
+        if not is_logged_in:
+            send_telegram_message(chat_id, MSG_NOT_LOGGED_IN, reply_markup=get_main_reply_keyboard(False))
             return
         if not user.get("is_approved"):
-            send_telegram_message(chat_id, MSG_NOT_APPROVED)
+            send_telegram_message(chat_id, MSG_NOT_APPROVED, reply_markup=get_main_reply_keyboard(True))
             return
 
         kb = build_routes_keyboard("primary")
@@ -360,12 +436,11 @@ def handle_command(chat_id: int, user_id: int, text: str, user_name: str = "") -
 
     # /backup — select backup route
     if cmd == "/backup":
-        user = db.get_user(user_id)
-        if not user or not user.get("iti_email"):
-            send_telegram_message(chat_id, MSG_NOT_LOGGED_IN)
+        if not is_logged_in:
+            send_telegram_message(chat_id, MSG_NOT_LOGGED_IN, reply_markup=get_main_reply_keyboard(False))
             return
         if not user.get("is_approved"):
-            send_telegram_message(chat_id, MSG_NOT_APPROVED)
+            send_telegram_message(chat_id, MSG_NOT_APPROVED, reply_markup=get_main_reply_keyboard(True))
             return
 
         kb = build_routes_keyboard("backup")
@@ -374,9 +449,8 @@ def handle_command(chat_id: int, user_id: int, text: str, user_name: str = "") -
 
     # /check — dispatch telegram_check to GitHub Actions
     if cmd == "/check":
-        user = db.get_user(user_id)
-        if not user or not user.get("iti_email"):
-            send_telegram_message(chat_id, MSG_NOT_LOGGED_IN)
+        if not is_logged_in:
+            send_telegram_message(chat_id, MSG_NOT_LOGGED_IN, reply_markup=get_main_reply_keyboard(False))
             return
         if not user.get("is_approved"):
             send_telegram_message(chat_id, MSG_NOT_APPROVED)
@@ -395,22 +469,22 @@ def handle_command(chat_id: int, user_id: int, text: str, user_name: str = "") -
         }
 
         # Reply immediately as required by specification
-        send_telegram_message(chat_id, MSG_DISPATCHING_CHECK)
+        send_telegram_message(chat_id, MSG_DISPATCHING_CHECK, reply_markup=get_main_reply_keyboard(is_logged_in))
 
         # Trigger GitHub Actions dispatch
         success = dispatch_github_action("telegram_check", payload)
         if not success:
-            send_telegram_message(chat_id, MSG_DISPATCH_FAILED)
+            send_telegram_message(chat_id, MSG_DISPATCH_FAILED, reply_markup=get_main_reply_keyboard(is_logged_in))
         return
 
     # /book — dispatch telegram_book to GitHub Actions
     if cmd == "/book":
         user = db.get_user(user_id)
         if not user or not user.get("iti_email"):
-            send_telegram_message(chat_id, MSG_NOT_LOGGED_IN)
+            send_telegram_message(chat_id, MSG_NOT_LOGGED_IN, reply_markup=get_main_reply_keyboard(False))
             return
         if not user.get("is_approved"):
-            send_telegram_message(chat_id, MSG_NOT_APPROVED)
+            send_telegram_message(chat_id, MSG_NOT_APPROVED, reply_markup=get_main_reply_keyboard(True))
             return
 
         payload = {
@@ -426,34 +500,34 @@ def handle_command(chat_id: int, user_id: int, text: str, user_name: str = "") -
         }
 
         # Reply immediately as required by specification
-        send_telegram_message(chat_id, MSG_DISPATCHING_BOOK)
+        send_telegram_message(chat_id, MSG_DISPATCHING_BOOK, reply_markup=get_main_reply_keyboard(is_logged_in))
 
         # Trigger GitHub Actions dispatch
         success = dispatch_github_action("telegram_book", payload)
         if not success:
-            send_telegram_message(chat_id, MSG_DISPATCH_FAILED)
+            send_telegram_message(chat_id, MSG_DISPATCH_FAILED, reply_markup=get_main_reply_keyboard(is_logged_in))
         return
 
     # /auto — toggle auto-booking
     if cmd == "/auto":
         user = db.get_user(user_id)
         if not user or not user.get("iti_email"):
-            send_telegram_message(chat_id, MSG_NOT_LOGGED_IN)
+            send_telegram_message(chat_id, MSG_NOT_LOGGED_IN, reply_markup=get_main_reply_keyboard(False))
             return
         if not user.get("is_approved"):
-            send_telegram_message(chat_id, MSG_NOT_APPROVED)
+            send_telegram_message(chat_id, MSG_NOT_APPROVED, reply_markup=get_main_reply_keyboard(True))
             return
 
         new_val = db.toggle_auto_book(user_id)
         msg = MSG_AUTO_ENABLED if new_val else MSG_AUTO_DISABLED
-        send_telegram_message(chat_id, msg)
+        send_telegram_message(chat_id, msg, reply_markup=get_main_reply_keyboard(is_logged_in))
         return
 
     # /status — display current configuration
     if cmd == "/status":
         user = db.get_user(user_id)
         if not user or not user.get("iti_email"):
-            send_telegram_message(chat_id, MSG_NOT_LOGGED_IN)
+            send_telegram_message(chat_id, MSG_NOT_LOGGED_IN, reply_markup=get_main_reply_keyboard(False))
             return
 
         status_text = "✅ معتمد ومفعل" if user.get("is_approved") else "⏳ بانتظار الموافقة"
@@ -474,13 +548,13 @@ def handle_command(chat_id: int, user_id: int, text: str, user_name: str = "") -
             auto_book=auto_book,
             booked_today=booked_today,
         )
-        send_telegram_message(chat_id, text)
+        send_telegram_message(chat_id, text, reply_markup=get_main_reply_keyboard(is_logged_in))
         return
 
     # /logout — delete user record
     if cmd == "/logout":
         db.delete_user(user_id)
-        send_telegram_message(chat_id, MSG_LOGGED_OUT)
+        send_telegram_message(chat_id, MSG_LOGGED_OUT, reply_markup=get_main_reply_keyboard(False))
         return
 
     # /admin — manage users (admin only)
