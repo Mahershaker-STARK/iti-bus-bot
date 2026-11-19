@@ -400,16 +400,13 @@ def handle_command(chat_id: int, user_id: int, text: str, user_name: str = "") -
             return
 
         payload = {
-            "telegram_id": user_id,
+            "chat_id": chat_id,
             "email": user["iti_email"],
             "password": user["iti_password"],
             "primary_route_id": user.get("primary_route_id"),
             "primary_stop_id": user.get("primary_stop_id"),
-            "primary_stop_name": user.get("primary_stop_name") or "",
             "backup_route_id": user.get("backup_route_id"),
             "backup_stop_id": user.get("backup_stop_id"),
-            "backup_stop_name": user.get("backup_stop_name") or "",
-            "chat_id": chat_id,
             "action": "check",
         }
 
@@ -433,16 +430,13 @@ def handle_command(chat_id: int, user_id: int, text: str, user_name: str = "") -
             return
 
         payload = {
-            "telegram_id": user_id,
+            "chat_id": chat_id,
             "email": user["iti_email"],
             "password": user["iti_password"],
             "primary_route_id": user.get("primary_route_id"),
             "primary_stop_id": user.get("primary_stop_id"),
-            "primary_stop_name": user.get("primary_stop_name") or "",
             "backup_route_id": user.get("backup_route_id"),
             "backup_stop_id": user.get("backup_stop_id"),
-            "backup_stop_name": user.get("backup_stop_name") or "",
-            "chat_id": chat_id,
             "action": "book",
         }
 
