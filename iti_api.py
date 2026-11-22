@@ -20,6 +20,7 @@ BASE_URL = "https://schedule.iti.gov.eg/api/v1"
 DEFAULT_HEADERS = {
     "Content-Type": "application/json",
     "Accept": "application/json",
+    "X-App-Build": "1",
 }
 
 # Arabic tashkeel (diacritics) Unicode block range
@@ -37,6 +38,10 @@ _LEADING_NUMS_RE = re.compile(r"^[\d\u0660-\u0669]+\s*")
 
 class ITIAuthError(Exception):
     """Raised when login or token refresh fails."""
+
+
+class ITIAppUpdateRequiredError(ITIAuthError):
+    """Raised when ITI backend returns 400 Bad Request with code APP_UPDATE_REQUIRED."""
 
 
 class ITIBookingError(Exception):
@@ -99,6 +104,20 @@ async def get_all_routes(
     async with session.get(url, headers=headers) as resp:
         if resp.status == 401:
             raise ITIAuthError("Access token expired or invalid while fetching routes.")
+        if resp.status == 400:
+            try:
+                err_json = await resp.json(content_type=None)
+                err_code = err_json.get("code") or ""
+                err_msg = err_json.get("message") or err_json.get("error") or ""
+            except Exception:
+                err_code = ""
+                body = await resp.text()
+                err_msg = body[:200]
+            if err_code == "APP_UPDATE_REQUIRED" or "APP_UPDATE_REQUIRED" in err_msg:
+                raise ITIAppUpdateRequiredError(
+                    f"ITI App update required (HTTP 400): {err_msg}"
+                )
+            raise ITIAuthError(f"Get all routes failed (HTTP 400): {err_msg}")
         resp.raise_for_status()
         data = await resp.json()
 
@@ -156,10 +175,21 @@ class ITIApiClient:
         payload = {"email": self.email, "password": self.password}
 
         async with session.post(url, json=payload, headers=DEFAULT_HEADERS) as resp:
-            if resp.status in (401, 403, 422):
-                body = await resp.text()
+            if resp.status in (400, 401, 403, 422):
+                try:
+                    err_json = await resp.json(content_type=None)
+                    err_code = err_json.get("code") or ""
+                    err_msg = err_json.get("message") or err_json.get("error") or ""
+                except Exception:
+                    err_code = ""
+                    body = await resp.text()
+                    err_msg = body[:200]
+                if err_code == "APP_UPDATE_REQUIRED" or "APP_UPDATE_REQUIRED" in err_msg:
+                    raise ITIAppUpdateRequiredError(
+                        f"ITI App update required (HTTP 400): {err_msg}"
+                    )
                 raise ITIAuthError(
-                    f"Login failed (HTTP {resp.status}): {body[:200]}"
+                    f"Login failed (HTTP {resp.status}): {err_msg}"
                 )
             resp.raise_for_status()
             data = await resp.json()
@@ -203,10 +233,21 @@ class ITIApiClient:
         payload = {"refreshToken": refresh_token}
 
         async with session.post(url, json=payload, headers=DEFAULT_HEADERS) as resp:
-            if resp.status in (401, 403):
-                body = await resp.text()
+            if resp.status in (400, 401, 403):
+                try:
+                    err_json = await resp.json(content_type=None)
+                    err_code = err_json.get("code") or ""
+                    err_msg = err_json.get("message") or err_json.get("error") or ""
+                except Exception:
+                    err_code = ""
+                    body = await resp.text()
+                    err_msg = body[:200]
+                if err_code == "APP_UPDATE_REQUIRED" or "APP_UPDATE_REQUIRED" in err_msg:
+                    raise ITIAppUpdateRequiredError(
+                        f"ITI App update required (HTTP 400): {err_msg}"
+                    )
                 raise ITIAuthError(
-                    f"Token refresh failed (HTTP {resp.status}): {body[:200]}"
+                    f"Token refresh failed (HTTP {resp.status}): {err_msg}"
                 )
             resp.raise_for_status()
             data = await resp.json()
@@ -253,6 +294,20 @@ class ITIApiClient:
         async with session.get(url, headers=headers, params=params) as resp:
             if resp.status == 401:
                 raise ITIAuthError("Access token expired or invalid.")
+            if resp.status == 400:
+                try:
+                    err_json = await resp.json(content_type=None)
+                    err_code = err_json.get("code") or ""
+                    err_msg = err_json.get("message") or err_json.get("error") or ""
+                except Exception:
+                    err_code = ""
+                    body = await resp.text()
+                    err_msg = body[:200]
+                if err_code == "APP_UPDATE_REQUIRED" or "APP_UPDATE_REQUIRED" in err_msg:
+                    raise ITIAppUpdateRequiredError(
+                        f"ITI App update required (HTTP 400): {err_msg}"
+                    )
+                raise ITIAuthError(f"Get trips failed (HTTP 400): {err_msg}")
             resp.raise_for_status()
             data = await resp.json()
 
@@ -293,6 +348,20 @@ class ITIApiClient:
         async with session.get(url, headers=headers) as resp:
             if resp.status == 401:
                 raise ITIAuthError("Access token expired or invalid.")
+            if resp.status == 400:
+                try:
+                    err_json = await resp.json(content_type=None)
+                    err_code = err_json.get("code") or ""
+                    err_msg = err_json.get("message") or err_json.get("error") or ""
+                except Exception:
+                    err_code = ""
+                    body = await resp.text()
+                    err_msg = body[:200]
+                if err_code == "APP_UPDATE_REQUIRED" or "APP_UPDATE_REQUIRED" in err_msg:
+                    raise ITIAppUpdateRequiredError(
+                        f"ITI App update required (HTTP 400): {err_msg}"
+                    )
+                raise ITIAuthError(f"Get route stops failed (HTTP 400): {err_msg}")
             resp.raise_for_status()
             data = await resp.json()
 
@@ -349,11 +418,16 @@ class ITIApiClient:
                 data = {}
 
             if not resp.ok:
+                err_code = data.get("code") or ""
                 message = (
                     data.get("message")
                     or data.get("error")
                     or f"Booking failed with HTTP {resp.status}"
                 )
+                if resp.status == 400 and (err_code == "APP_UPDATE_REQUIRED" or "APP_UPDATE_REQUIRED" in str(message)):
+                    raise ITIAppUpdateRequiredError(
+                        f"ITI App update required (HTTP 400): {message}"
+                    )
                 raise ITIBookingError(str(message), resp.status)
 
         if "data" in data:

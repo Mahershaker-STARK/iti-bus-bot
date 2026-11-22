@@ -52,6 +52,12 @@ if not RAW_ITI_URL.endswith("/api/v1"):
 else:
     ITI_URL = RAW_ITI_URL
 
+DEFAULT_HEADERS = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "X-App-Build": "1",
+}
+
 CAIRO_TZ = pytz.timezone("Africa/Cairo")
 
 
@@ -156,6 +162,9 @@ async def get_authenticated_client(
             token = login_data.get("accessToken")
             logger.info("Logged in successfully for %s", email)
             return client, token
+        except iti_api.ITIAppUpdateRequiredError as e:
+            logger.critical("ITI App update required (HTTP 400 APP_UPDATE_REQUIRED) for %s: %s", email, e)
+            return client, None
         except iti_api.ITIAuthError as e:
             logger.error("ITI authentication failed for %s: %s", email, e)
             return client, None
@@ -179,6 +188,9 @@ async def fetch_trips_safe(
     try:
         trips = await client.get_trips(session, access_token, date_str)
         return trips, access_token
+    except iti_api.ITIAppUpdateRequiredError as e:
+        logger.critical("Fetch trips failed due to APP_UPDATE_REQUIRED: %s", e)
+        raise
     except iti_api.ITIAuthError:
         logger.info("Access token expired while fetching trips; re-authenticating...")
         login_res = await client.login(session)
@@ -493,6 +505,16 @@ async def attempt_booking_for_user(
         booking = None
         try:
             booking = await client.book_trip(session, access_token, trip_id, stop_id)
+        except iti_api.ITIAppUpdateRequiredError as e:
+            logger.critical("Booking failed due to APP_UPDATE_REQUIRED: %s", e)
+            if is_dispatch:
+                await send_telegram(
+                    session,
+                    chat_id,
+                    "⚠️ <b>تحديث التطبيق مطلوب (APP_UPDATE_REQUIRED)</b>\n"
+                    "يتطلب خادم ITI تحديث رقم البناء (X-App-Build).",
+                )
+            return False
         except iti_api.ITIAuthError:
             logger.info("Token expired during booking; re-logging in...")
             login_res = await client.login(session)
@@ -587,6 +609,15 @@ async def handle_dispatch_check(session: aiohttp.ClientSession, user: dict, date
 
     try:
         trips, _ = await fetch_trips_safe(session, client, active_token, date_str)
+    except iti_api.ITIAppUpdateRequiredError as e:
+        logger.critical("Failed to fetch trips due to APP_UPDATE_REQUIRED: %s", e)
+        await send_telegram(
+            session,
+            chat_id,
+            "⚠️ <b>تحديث التطبيق مطلوب (APP_UPDATE_REQUIRED)</b>\n"
+            "يتطلب خادم ITI تحديث رقم البناء (X-App-Build).",
+        )
+        return
     except Exception as e:
         logger.error("Failed to fetch trips for check: %s", e)
         await send_telegram(
@@ -708,6 +739,13 @@ async def handle_dispatch_login(session: aiohttp.ClientSession, payload: dict) -
         }
         await send_telegram(session, chat_id, msg, reply_markup=main_keyboard)
 
+    except iti_api.ITIAppUpdateRequiredError as e:
+        logger.critical("Login verification failed due to APP_UPDATE_REQUIRED: %s", e)
+        msg = (
+            "⚠️ <b>تحديث التطبيق مطلوب (APP_UPDATE_REQUIRED)</b>\n\n"
+            "يتطلب خادم ITI تحديث رقم البناء (X-App-Build). يرجى التحقق من التحديثات."
+        )
+        await send_telegram(session, chat_id, msg)
     except iti_api.ITIAuthError:
         logger.warning("Login verification FAILED for %s (Invalid credentials)", email)
         msg = (
@@ -770,6 +808,16 @@ async def run_dispatch_mode(
 
         try:
             trips, _ = await fetch_trips_safe(session, client, active_token, date_str)
+        except iti_api.ITIAppUpdateRequiredError as e:
+            logger.critical("Failed to fetch trips for dispatch booking due to APP_UPDATE_REQUIRED: %s", e)
+            chat_id = user.get("chat_id") or user.get("telegram_id")
+            await send_telegram(
+                session,
+                chat_id,
+                "⚠️ <b>تحديث التطبيق مطلوب (APP_UPDATE_REQUIRED)</b>\n"
+                "يتطلب خادم ITI تحديث رقم البناء (X-App-Build).",
+            )
+            return
         except Exception as e:
             logger.error("Failed to fetch trips for dispatch booking: %s", e)
             chat_id = user.get("chat_id") or user.get("telegram_id")
@@ -831,6 +879,9 @@ async def run_scheduled_mode(session: aiohttp.ClientSession, date_str: str) -> N
                 shared_trips, _ = await fetch_trips_safe(session, client, active_token, date_str)
                 logger.info("Fetched %d available trips using credentials of %s", len(shared_trips), email)
                 break
+        except iti_api.ITIAppUpdateRequiredError as e:
+            logger.critical("Shared trip fetch aborted due to APP_UPDATE_REQUIRED: %s", e)
+            break
         except Exception as e:
             logger.debug("Failed shared trip fetch with user %s: %s", email, e)
 
